@@ -5,9 +5,10 @@ import mongoose from 'mongoose';
 import studentRouter from './routes/studentRouter.js';
 import productRouter from './routes/productRouter.js';
 import userRouter from './routes/userRouter.js';
-import jwt , { decode } from 'jsonwebtoken'
+import jwt , { decode } from 'jsonwebtoken';
+import dotenv from 'dotenv'
 
-
+dotenv.config()
 
 
 
@@ -15,7 +16,7 @@ import jwt , { decode } from 'jsonwebtoken'
 const app = express();
 
 // mongo bd connection string
-const mongodbUrl="mongodb+srv://admin:1234@cluster0.ugpprvh.mongodb.net/?appName=Cluster0";
+const mongodbUrl=process.env.MONGO_DB_URL
 
 // to create the mongodb connection
 mongoose.connect(mongodbUrl,{})
