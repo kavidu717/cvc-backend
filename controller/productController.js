@@ -1,4 +1,4 @@
- import Student from "../models/product.js"  
+ import Product from "../models/product.js"  
   
   
   export function getProducts(req,res){
