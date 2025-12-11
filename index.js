@@ -35,7 +35,7 @@ connection.once("open",
     const token=req.header("Authorization")?.replace("Bearer ", "")
       //  next();
       if(token!=null){
-        jwt.verify(token,"kavidu123",
+        jwt.verify(token,process.env.SECRET_KEY,
             (error,decoded)=>{
                 if(!error){
                     console.log(decoded)
