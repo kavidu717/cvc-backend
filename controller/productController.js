@@ -38,6 +38,5 @@ import { isAdmin } from "./userController.js";
           )
         
        })
-   }
-
+   } 
 
