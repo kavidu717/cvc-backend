@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 
 import productRouter from './routes/productRouter.js';
 import userRouter from './routes/userRouter.js';
+import orderRouter from './routes/orderRouter.js';
 import jwt , { decode } from 'jsonwebtoken';
 import dotenv from 'dotenv'
 
@@ -52,6 +53,7 @@ connection.once("open",
 
  app.use("/api/user",userRouter)
  app.use("/api/product",productRouter)
+ app.use("/api/order",orderRouter)
 
 app.listen(
     5000,

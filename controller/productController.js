@@ -12,7 +12,7 @@ import { isAdmin } from "./userController.js";
       }
 
     const newProductDate=req.body
-    const product =new product(newProductDate)
+    const product =new Product(newProductDate)
 
     product.save().then(
         ()=>{
@@ -31,7 +31,7 @@ import { isAdmin } from "./userController.js";
    }
    // every one should be able to shoe the product
    export function getProduct(req,res){
-       product.find({}).then(
+       Product.find({}).then(
         (productList)=>{
           res.json(
             productList
