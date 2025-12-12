@@ -59,3 +59,10 @@ app.listen(
     console.log("server is running on port 5000");
 
 });
+  
+//"email": "admin@example.com",        // as admin
+//  "password": "superSecurePassword!123",
+
+
+// "email": "admin3@example.com",     as customer
+// "password": "superSecurePassword!123",

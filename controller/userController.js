@@ -13,6 +13,21 @@ dotenv.config()
  //console.log(hashData);
     const newUser=new User(hashData)
 
+    // beforre create the that part firt create the adnin
+    if(hashData.type=="admin"){
+         if(req.user==null){
+            res.json({
+                message:"please login as administrator to create the admin account"
+            })
+            return
+         }
+         if(req.user.type!="admin"){
+              res.json({
+                message:"please login as administrator to create the admin account"
+              })
+         } return
+    }
+
     newUser.save().then(
         ()=>{
             res.json({
@@ -62,4 +77,23 @@ dotenv.config()
         }
         }
      )
+ }
+ // to check customer or admim
+
+ export function isAdmin(req){
+     if(req.user==null){
+         return false
+     } if(req.user.type!="admin"){
+            return false
+     }
+     return true
+ }
+
+ export function isCustomer(req){
+     if(req.user==null){
+         return false
+     } if(req.user.type!="customer"){
+            return false
+     }
+     return true
  }
