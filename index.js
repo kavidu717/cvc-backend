@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
 
 
-
+import productRouter from './routes/productRouter.js';
 import userRouter from './routes/userRouter.js';
 import jwt , { decode } from 'jsonwebtoken';
 import dotenv from 'dotenv'
@@ -51,7 +51,7 @@ connection.once("open",
  
 
  app.use("/api/user",userRouter)
-
+ app.use("/api/product",productRouter)
 
 app.listen(
     5000,
