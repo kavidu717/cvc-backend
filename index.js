@@ -8,6 +8,7 @@ import userRouter from './routes/userRouter.js';
 import orderRouter from './routes/orderRouter.js';
 import jwt , { decode } from 'jsonwebtoken';
 import dotenv from 'dotenv'
+import cors from 'cors'
 
 dotenv.config()
 
@@ -15,6 +16,7 @@ dotenv.config()
 
 
 const app = express();
+app.use(cors())
 
 // mongo bd connection string
 const mongodbUrl=process.env.MONGO_DB_URL
