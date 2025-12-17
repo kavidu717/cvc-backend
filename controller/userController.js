@@ -66,7 +66,13 @@ dotenv.config()
               },process.env.SECRET_KEY)
               res.json({
                  message:"user login in",
-                 token:token
+                 token:token,
+                 user:{
+                    firstName:user.firstName,
+                    lastName:user.lastName,
+                    type:user.type,
+                    profilePicture:user.profilePicture
+                 }
               })
 
             }else{

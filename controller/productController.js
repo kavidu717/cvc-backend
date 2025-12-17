@@ -16,7 +16,7 @@ import { isAdmin } from "./userController.js";
 
     product.save().then(
         ()=>{
-           res.json({
+           res.status(403).json({
             message:"product created"
            }) 
         }
@@ -40,3 +40,25 @@ import { isAdmin } from "./userController.js";
        })
    } 
 
+export function deleteProduct(req,res){
+    if(!isAdmin(req)){
+        res.status(403).json({
+           message:"login as admin to delete the product"
+        })
+        return
+     }
+     const productId=req.params.productId
+     Product.deleteOne({productId:productId}).then(
+        ()=>{
+            res.json({
+                message:"product deleted"
+            })
+        }
+     ).catch(
+        (error)=>{
+            res.json({
+                message:error
+            })
+        }
+     )
+}
