@@ -1,5 +1,5 @@
 import Order from "../models/order.js";
-import { isCustomer } from "./userController.js";
+import { isAdmin, isCustomer } from "./userController.js";
   import Product from "../models/product.js";
 
 
@@ -48,8 +48,8 @@ import { isCustomer } from "./userController.js";
 
             newProductArray[i]={
               name:product.productName,
-              price:product.price,
-              quentity:newOrderData.orderItems[i].quentity,
+              price:product.lastPrice,
+              quentity:newOrderData.orderItems[i].qty,
               image:product.image[0]
               
 
@@ -70,9 +70,10 @@ import { isCustomer } from "./userController.js";
 
 
 
-       await order.save()
+        const savedOrder=await order.save()
        res.json({
-        message:"order created"
+        message:"order created",
+        order:savedOrder
        })
          
 
@@ -88,8 +89,23 @@ import { isCustomer } from "./userController.js";
   }
  export async function getOrder(req, res) {
   try {
+    if(isCustomer(req)){
+
+   
     const orders = await Order.find({ email: req.user.email });
     res.json(orders);
+    return;
+ }else if(isAdmin(req)){
+   
+  const orders = await Order.find();
+  res.json(orders);
+  return
+
+ }else{
+    res.json({
+        message:"login as customer or admin to get the order"
+    })
+ }
 
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -111,3 +127,44 @@ try{
     )
     }
    }
+
+
+  export async function getQuote(req, res) {
+  try {
+    const { orderItems } = req.body;
+
+    let total = 0;
+    let labelTotal = 0;
+    const newProductArray = [];
+
+    for (let i = 0; i < orderItems.length; i++) {
+      const product = await Product.findOne({
+        productId: orderItems[i].productId
+      });
+
+      if (!product) {
+        return res.status(404).json({ message: "product not found" });
+      }
+
+      labelTotal += product.price * orderItems[i].qty;
+      total += product.lastPrice * orderItems[i].qty;
+
+      newProductArray.push({
+        name: product.productName,
+        price: product.lastPrice,
+        labelPrice: product.price,
+        quantity: orderItems[i].qty,
+        image: product.image[0]
+      });
+    }
+
+    res.json({
+      orderItems: newProductArray,
+      total,
+      labelTotal
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
