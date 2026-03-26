@@ -1,18 +1,47 @@
 import Order from "../models/order.js";
 import { isAdmin, isCustomer } from "./userController.js";
-  import Product from "../models/product.js";
+import Product from "../models/product.js";
+import Stripe from "stripe";
+
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not configured");
+  }
+
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
+
+function getFrontendBaseUrl(req) {
+  return process.env.FRONTEND_URL || req.headers.origin || "http://localhost:5173";
+}
+
+function getStripeAmount(amount) {
+  return Math.round(Number(amount) * 100);
+}
 
 
 
-  export async function createOrder(req,res){
+export async function createOrder(req,res){
 
-   if(!isCustomer){
-      res.json({
+   if(!isCustomer(req)){
+      return res.status(401).json({
         message:"login as customer to create the order"
       })
    }
 
     try{
+     if(!Array.isArray(req.body?.orderItems) || req.body.orderItems.length === 0){
+      return res.status(400).json({
+        message:"order items are required"
+      })
+     }
+
+     if(!req.body?.name || !req.body?.address || !req.body?.phone){
+      return res.status(400).json({
+        message:"name, address and phone are required"
+      })
+     }
+
      const latestOrder= await Order.find().sort({date: -1}).limit(1)
       let orderId
 
@@ -32,39 +61,43 @@ import { isAdmin, isCustomer } from "./userController.js";
       const newProductArray=[]
         
        for(let i=0;i<newOrderData.orderItems.length;i++){
-          // console.log(newOrderData.orderItems[i]);
+          const currentItem = newOrderData.orderItems[i]
+
+          if(!currentItem?.productId || !currentItem?.qty || currentItem.qty <= 0){
+            return res.status(400).json({
+              message:"invalid order item"
+            })
+          }
           
            const product= await Product.findOne(
             {
-                productId:newOrderData.orderItems[i].productId
+                productId:currentItem.productId
             }
            )
           if(product==null){
-           res.json({
+           return res.status(404).json({
                message:"product not found"
            })
-           return
           }
 
             newProductArray[i]={
               name:product.productName,
               price:product.lastPrice,
-              quentity:newOrderData.orderItems[i].qty,
-              image:product.image[0]
+              quentity:currentItem.qty,
+              image:product.image?.[0] ?? ""
               
 
             }
 
 
        }
-       console.log(newProductArray);
-
         newOrderData.orderItems=newProductArray
 
 
 
         newOrderData.orderId=orderId
         newOrderData.email=req.user.email
+        newOrderData.paymentStatus="unpaid"
 
        const order = new Order(newOrderData)
 
@@ -102,13 +135,129 @@ import { isAdmin, isCustomer } from "./userController.js";
   return
 
  }else{
-    res.json({
+    res.status(401).json({
         message:"login as customer or admin to get the order"
     })
  }
 
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+}
+
+export async function createStripeCheckoutSession(req, res) {
+  if (!isCustomer(req)) {
+    return res.status(401).json({
+      message: "login as customer to continue payment"
+    });
+  }
+
+  try {
+    const order = await Order.findOne({
+      orderId: req.params.orderId,
+      email: req.user.email
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "order not found"
+      });
+    }
+
+    if (!Array.isArray(order.orderItems) || order.orderItems.length === 0) {
+      return res.status(400).json({
+        message: "order items are required for payment"
+      });
+    }
+
+    const stripe = getStripeClient();
+    const frontendBaseUrl = getFrontendBaseUrl(req);
+    const currency = (process.env.STRIPE_CURRENCY || "usd").toLowerCase();
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      customer_email: order.email,
+      metadata: {
+        orderId: order.orderId,
+        email: order.email
+      },
+      line_items: order.orderItems.map((item) => ({
+        price_data: {
+          currency,
+          product_data: {
+            name: item.name
+          },
+          unit_amount: getStripeAmount(item.price)
+        },
+        quantity: Number(item.quentity ?? item.quantity ?? 0)
+      })),
+      success_url: `${frontendBaseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}&orderId=${encodeURIComponent(order.orderId)}`,
+      cancel_url: `${frontendBaseUrl}/payment/cancel?orderId=${encodeURIComponent(order.orderId)}`
+    });
+
+    order.stripeSessionId = session.id;
+    await order.save();
+
+    return res.json({
+      url: session.url,
+      sessionId: session.id
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message
+    });
+  }
+}
+
+export async function verifyStripeCheckoutSession(req, res) {
+  const sessionId = req.query.session_id;
+
+  if (!sessionId) {
+    return res.status(400).json({
+      message: "session_id is required"
+    });
+  }
+
+  try {
+    const stripe = getStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const orderId = session.metadata?.orderId;
+
+    if (!orderId) {
+      return res.status(400).json({
+        message: "order metadata is missing from stripe session"
+      });
+    }
+
+    const order = await Order.findOne({ orderId });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "order not found"
+      });
+    }
+
+    if (session.payment_status !== "paid") {
+      return res.status(400).json({
+        message: "payment is not completed",
+        paymentStatus: session.payment_status
+      });
+    }
+
+    order.paymentStatus = "paid";
+    order.paymentId = typeof session.payment_intent === "string" ? session.payment_intent : order.paymentId;
+    order.stripeSessionId = session.id;
+    await order.save();
+
+    return res.json({
+      message: "payment verified",
+      order
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message
+    });
   }
 }
  

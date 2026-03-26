@@ -40,6 +40,13 @@ import mongoose from "mongoose";
         type:String,
        // require:true
      },
+     stripeSessionId:{
+        type:String
+     },
+     paymentStatus:{
+        type:String,
+        default:"unpaid"
+     },
      notes:{
         type:String,
         require:true

@@ -16,15 +16,14 @@ import { isAdmin } from "./userController.js";
 
     product.save().then(
         ()=>{
-           res.status(403).json({
+           res.status(201).json({
             message:"product created"
            }) 
         }
     ).catch(
         (error)=>{
-         res.json({
-            
-            message:error
+         res.status(500).json({
+            message:error.message
          })
         }
     )     
@@ -56,8 +55,8 @@ export function deleteProduct(req,res){
         }
      ).catch(
         (error)=>{
-            res.json({
-                message:error
+            res.status(500).json({
+                message:error.message
             })
         }
      )
@@ -82,8 +81,8 @@ export function updateProduct(req,res){
         }
      ).catch(
         (error)=>{
-    res.status(403).json({
-   message:error
+    res.status(500).json({
+   message:error.message
 })
         }
      )
